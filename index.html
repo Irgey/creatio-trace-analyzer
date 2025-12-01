@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Trace analyzer</title>
+
+<style>
+body { margin:0; background:#0f172a; color:#e5e7eb; font-family:system-ui,sans-serif; }
+header { padding:16px; background:#020617; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; }
+#top-panel { padding:16px; }
+
+button, select, input[type="text"] {
+  padding:6px 14px;
+  margin-right:8px;
+  background:#3b82f6;
+  border:none;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+  font-size:13px;
+}
+button.secondary { background:#1f2937; }
+
+.file-wrapper {
+  display:inline-flex;
+  align-items:center;
+  position:relative;
+  gap:10px;
+}
+.file-wrapper input[type="file"] {
+  position:absolute;
+  left:0; top:0;
+  opacity:0;
+  cursor:pointer;
+  width:130px;
+  height:32px;
+}
+.file-wrapper .file-label {
+  background:#3b82f6;
+  padding:6px 14px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+  font-size:13px;
+  width:130px;
+  text-align:center;
+}
+#selectedFileName {
+  font-size:12px;
+  color:#cbd5e1;
+  max-width:300px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+textarea {
+  width:100%; height:200px; background:#0f172a; color:#e5e7eb;
+  border:1px solid #334155; border-radius:6px;
+  padding:8px; font-family:monospace; font-size:12px;
+}
+#errorLog {
+  margin-top:8px; white-space:pre-wrap;
+  color:#fca5a5; font-size:12px;
+}
+
+.stats { margin-top:12px; font-size:13px; color:#9ca3af; }
+.stats b { color:#e5e7eb; }
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+th, td {
+  padding:6px;
+  border-bottom:1px solid #1e293b;
+}
+th {
+  cursor:pointer;
+  color:#94a3b8;
+  user-select:none;
+}
+th.sorted-asc::after { content:" ▲"; }
+th.sorted-desc::after { content:" ▼"; }
+
+.detailsBtn {
+  background:#475569;
+  border:none;
+  padding:4px 10px;
+  border-radius:6px;
+  font-size:11px;
+  cursor:pointer;
+  color:white;
+}
+.detailsBtn:hover { background:#64748b; }
+
+.badge {
+  padding:2px 6px; border-radius:5px; border:1px solid #475569; font-size:11px;
+}
+.badge-slow { background:#7f1d1d; border-color:#f87171; color:#fecaca; }
+.badge-fast { background:#14532d; border-color:#22c55e; color:#bbf7d0; }
+
+.pagination {
+  display:flex;
+  gap:6px;
+  padding:12px 0;
+  flex-wrap:wrap;
+}
+.page-btn {
+  padding:4px 10px;
+  background:#1e293b;
+  border-radius:5px;
+  cursor:pointer;
+  font-size:12px;
+}
+.page-btn.active { background:#3b82f6; }
+.page-btn.disabled { opacity:0.4; cursor:default; }
+
+#detailsRow {
+  background:#1e293b;
+  padding:16px;
+}
+
+.details-block {
+  padding:12px;
+  border:1px solid #334155;
+  border-radius:8px;
+  margin-bottom:12px;
+  background:#0f172a;
+}
+
+pre {
+  white-space:pre-wrap;
+  background:#0f172a;
+  padding:12px;
+  border-radius:6px;
+  border:1px solid #334155;
+  font-size:12px;
+  overflow-x:auto;
+}
+
+#searchInput {
+    background:#0f172a;
+    border:1px solid #334155;
+    border-radius:6px;
+    color:#e5e7eb;
+    padding:6px;
+}
+
+details summary {
+  cursor:pointer;
+  font-size:13px;
+  color:#cbd5e1;
+}
+#codeStats { padding-left:12px; white-space:pre-wrap; margin-top:6px; font-size:12px; }
+.copySqlBtn {
+  background:#334155;
+  color:#e2e8f0;
+  border:none;
+  padding:4px 10px;
+  border-radius:6px;
+  font-size:11px;
+  cursor:pointer;
+}
+.copySqlBtn:hover {
+  background:#475569;
+}
+.copySqlBtn:active {
+  background:#64748b;
+}
+
+.interpolateBtn {
+  background:#334155;
+  color:#e2e8f0;
+  border:none;
+  padding:4px 10px;
+  border-radius:6px;
+  font-size:11px;
+  cursor:pointer;
+}
+.interpolateBtn:hover {
+  background:#475569;
+}
+.copyInterpolatedBtn {
+  background:#334155;
+  color:#e2e8f0;
+  border:none;
+  padding:4px 10px;
+  border-radius:6px;
+  font-size:11px;
+  cursor:pointer;
+}
+.copyInterpolatedBtn:hover {
+  background:#475569;
+}
+.copyInterpolatedBtn:active {
+  background:#64748b;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2 id="title">Trace analyzer</h2>
+  <select id="langSelect">
+    <option value="en" selected>English</option>
+    <option value="uk">Українська</option>
+  </select>
+</header>
+
+<div id="top-panel">
+
+  <button id="toggleTextBtn">Show text input</button>
+
+  <div class="file-wrapper">
+    <span class="file-label" id="fileLabel">Choose File</span>
+    <input type="file" id="fileInput" accept=".json,.txt" />
+    <span id="selectedFileName"></span>
+  </div>
+
+  <button id="parseFileBtn">Parse file</button>
+  <button id="resetSortBtn" class="secondary">Reset sorting</button>
+
+  <div id="textInputPanel" style="display:none;">
+    <textarea id="rawInput" placeholder="Paste logs here"></textarea>
+    <button id="parseBtn" class="secondary">Parse text</button>
+  </div>
+
+  <div id="searchPanel" style="margin-top:12px;">
+    <select id="searchColumn">
+      <option value="Duration">Duration</option>
+      <option value="Code">Code</option>
+      <option value="StartedOn">StartedOn</option>
+      <option value="Id">Id</option>
+      <option value="ParentId">ParentId</option>
+      <option value="SQLText">SQLText</option>
+    </select>
+    <input id="searchInput" placeholder="Search..." />
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div class="stats">
+    <div id="st_total">Total lines: <b>0</b></div>
+    <div id="st_ok">Valid: <b>0</b></div>
+    <div id="st_err">Errors: <b>0</b></div>
+    <div id="st_found">Found: <b>0</b></div>
+    <div id="st_max">Max Duration: <b>–</b></div>
+    <div id="st_avg">Avg Duration: <b>–</b></div>
+
+    <div id="codeStatsContainer" style="margin-top:12px;">
+      <details>
+        <summary id="codeStatsSummary">Code breakdown</summary>
+        <div id="codeStats"></div>
+      </details>
+    </div>
+  </div>
+
+  <pre id="errorLog"></pre>
+
+</div>
+
+<div id="tableWrapper">
+  <table>
+    <thead>
+      <tr>
+        <th data-field="Duration" data-type="number">Duration</th>
+        <th data-field="Code" data-type="string">Code</th>
+        <th data-field="StartedOn" data-type="string">StartedOn</th>
+        <th data-field="Id" data-type="string">Id</th>
+        <th data-field="ParentId" data-type="string">ParentId</th>
+        <th data-field="SQLText" data-type="string">SQLText</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+let rows = [];
+let rowsOriginal = [];
+let filtered = [];
+let currentPage = 1;
+const pageSize = 50;
+let expandedRow = null;
+
+const dict = {
+  en:{
+    title:"Trace analyzer",
+    toggle:"Show text input",
+    toggleHide:"Hide text input",
+    parseText:"Parse text",
+    parseFile:"Parse file",
+    chooseFile:"Choose File",
+    search:"Search",
+    total:"Total lines",
+    valid:"Valid",
+    errors:"Errors",
+    found:"Found",
+    max:"Max Duration",
+    avg:"Avg Duration",
+    codeStats:"Code breakdown",
+    noData:"No data or nothing matches the filter.",
+    reset:"Reset sorting",
+    noParams:"No parameters"
+  },
+  uk:{
+    title:"Аналітика трасування",
+    toggle:"Показати поле вводу",
+    toggleHide:"Сховати поле вводу",
+    parseText:"Розібрати текст",
+    parseFile:"Розібрати файл",
+    chooseFile:"Обрати файл",
+    search:"Пошук",
+    total:"Усього рядків",
+    valid:"Успішно",
+    errors:"Помилок",
+    found:"Знайдено",
+    max:"Макс Duration",
+    avg:"Середній Duration",
+    codeStats:"Статистика Code",
+    noData:"Немає даних або нічого не знайдено.",
+    reset:"Скинути сортування",
+    noParams:"Немає параметрів"
+  }
+};
+
+function applyLang(l){
+  const d=dict[l];
+  document.getElementById("title").innerText=d.title;
+  toggleTextBtn.innerText = textInputPanel.style.display==="block" ? d.toggleHide : d.toggle;
+  parseBtn.innerText=d.parseText;
+  parseFileBtn.innerText=d.parseFile;
+  resetSortBtn.innerText=d.reset;
+  fileLabel.innerText=d.chooseFile;
+  document.getElementById("searchBtn").innerText=d.search;
+
+  document.getElementById("st_total").childNodes[0].textContent=d.total+": ";
+  document.getElementById("st_ok").childNodes[0].textContent=d.valid+": ";
+  document.getElementById("st_err").childNodes[0].textContent=d.errors+": ";
+  document.getElementById("st_found").childNodes[0].textContent=d.found+": ";
+  document.getElementById("st_max").childNodes[0].textContent=d.max+": ";
+  document.getElementById("st_avg").childNodes[0].textContent=d.avg+": ";
+  document.getElementById("codeStatsSummary").innerText=d.codeStats;
+}
+langSelect.addEventListener("change",()=>applyLang(langSelect.value));
+applyLang("en");
+
+fileInput.addEventListener("change", () => {
+  const f = fileInput.files[0];
+  const name = f ? f.name : "";
+  selectedFileName.textContent = name;
+
+  if (f) {
+      const r = new FileReader();
+      r.onload = (e) => {
+          parseText(e.target.result);
+      };
+      r.readAsText(f);
+  }
+});
+
+toggleTextBtn.addEventListener("click",()=>{
+  const l=langSelect.value;
+  if(textInputPanel.style.display==="none" || !textInputPanel.style.display){
+    textInputPanel.style.display="block";
+    toggleTextBtn.innerText=dict[l].toggleHide;
+  } else {
+    textInputPanel.style.display="none";
+    toggleTextBtn.innerText=dict[l].toggle;
+  }
+});
+
+parseFileBtn.addEventListener("click",()=>{
+  const f=fileInput.files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>parseText(e.target.result);
+  r.readAsText(f);
+});
+parseBtn.addEventListener("click",()=>parseText(rawInput.value));
+
+function parseText(text){
+  errorLog.textContent="";
+  rows=[];
+  expandedRow=null;
+
+  text=text.replace(/}\\s*{/g,"}\n{");
+  const lines=text.split(/\r?\n/).filter(x=>x.trim());
+  updateStat("st_total",lines.length);
+
+  const errors=[];
+  lines.forEach((line,i)=>{
+    try{
+      const obj=JSON.parse(line.trim());
+      rows.push({
+        ...flat(obj),
+        __full: obj
+      });
+    }catch(e){
+      errors.push(`Line ${i+1}: ${e.message}`);
+    }
+  });
+
+  updateStat("st_err",errors.length);
+  updateStat("st_ok",rows.length);
+  errorLog.textContent=errors.join("\n");
+
+  rowsOriginal = rows.slice();
+  filtered = rows.slice();
+  updateStat("st_found", filtered.length);
+
+  currentPage=1;
+  updateStats();
+  updateCodeStats();
+  renderTable();
+}
+
+function flat(o){
+  return{
+    Duration:Number(o.Duration||0),
+    Code:o.Code||"",
+    StartedOn:o.StartedOn||"",
+    Id:o.Id||"",
+    ParentId:o.ParentId||"",
+    SQLText:(o.Data?.SQLText||"").replace(/\s+/g," ").trim()
+  };
+}
+
+searchBtn.addEventListener("click",applySearch);
+
+// Run search on Enter key
+searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        applySearch();
+    }
+});
+
+
+function applySearch(){
+  const col=searchColumn.value;
+  const q=searchInput.value.toLowerCase();
+
+  if(!q){
+    filtered=rowsOriginal.slice();
+  } else {
+    filtered=rowsOriginal.filter(r=>String(r[col]).toLowerCase().includes(q));
+  }
+
+  expandedRow=null;
+  updateStat("st_found", filtered.length);
+  updateStats();
+  updateCodeStats();
+  currentPage=1;
+  renderTable();
+}
+
+function updateCodeStats(){
+  const bucket={};
+  filtered.forEach(r=>{
+    bucket[r.Code] = (bucket[r.Code] || 0) + 1;
+  });
+
+  const sorted = Object.entries(bucket)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([code,count]) => `${code || "(empty)"} — ${count}`)
+    .join("\n");
+
+  document.getElementById("codeStats").textContent = sorted;
+}
+
+resetSortBtn.addEventListener("click",()=>{
+  filtered=rowsOriginal.slice();
+  expandedRow=null;
+  updateStat("st_found", filtered.length);
+  updateStats();
+  updateCodeStats();
+  currentPage=1;
+  renderTable();
+});
+
+document.querySelector("thead").addEventListener("click",sortColumn);
+let sortState = { field:null, dir:null, type:null };
+
+function sortColumn(e){
+  const th=e.target.closest("th");
+  if(!th || !th.dataset.field) return;
+
+  const field=th.dataset.field;
+  const type=th.dataset.type;
+
+  if(sortState.field===field){
+    sortState.dir = sortState.dir==="asc" ? "desc" : "asc";
+  } else {
+    sortState.field=field;
+    sortState.type=type;
+    sortState.dir="asc";
+  }
+
+  sortRows();
+  expandedRow=null;
+  updateStats();
+  updateCodeStats();
+  currentPage=1;
+  renderTable();
+}
+
+function sortRows(){
+  if(!sortState.field) return;
+
+  const f=sortState.field;
+  const t=sortState.type;
+  const dir=sortState.dir==="asc" ? 1 : -1;
+
+  filtered.sort((a,b)=>{
+    if(t==="number") return (a[f]-b[f])*dir;
+    return String(a[f]).localeCompare(String(b[f])) * dir;
+  });
+}
+
+function renderTable(){
+  const body=document.getElementById("resultsBody");
+  body.innerHTML="";
+
+  if(!filtered.length){
+    const tr=document.createElement("tr");
+    const td=document.createElement("td");
+    td.colSpan=7;
+    td.textContent=dict[langSelect.value].noData;
+    tr.appendChild(td);
+    body.appendChild(tr);
+    renderPagination();
+    return;
+  }
+
+  const start=(currentPage-1)*pageSize;
+  const subset=filtered.slice(start,start+pageSize);
+
+  subset.forEach((row, idx) => {
+    const full = row.__full;
+
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><span class="badge ${
+        Number(full.Duration || 0)>=500 ? "badge-slow" :
+        (Number(full.Duration || 0)<=50 && Number(full.Duration || 0)>0 ? "badge-fast" : "")
+      }">${Number(full.Duration||0).toFixed(2)}</span></td>
+      <td>${full.Code}</td>
+      <td>${full.StartedOn}</td>
+      <td>${full.Id}</td>
+      <td>${full.ParentId}</td>
+      <td>${(full.Data?.SQLText || "").replace(/\s+/g," ").trim()}</td>
+      <td><button class="detailsBtn">Details</button></td>
+    `;
+
+    body.appendChild(tr);
+
+    tr.querySelector(".detailsBtn").addEventListener("click",()=>{
+        const globalIndex = start + idx;
+        toggleDetailsRow(body, tr, filtered[globalIndex].__full);
+    });
+  });
+
+  renderPagination();
+  updateSortHeaders();
+}
+
+function renderPagination(){
+  const pag=document.getElementById("pagination");
+  pag.innerHTML="";
+
+  const totalPages=Math.ceil(filtered.length/pageSize);
+  if(totalPages<=1) return;
+
+  function btn(label,page,disabled=false,active=false){
+    const el=document.createElement("div");
+    el.textContent=label;
+    el.className="page-btn";
+    if(disabled) el.classList.add("disabled");
+    if(active) el.classList.add("active");
+    if(!disabled){
+      el.addEventListener("click",()=>{ currentPage=page; expandedRow=null; renderTable(); });
+    }
+    pag.appendChild(el);
+  }
+
+  btn("«",1,currentPage===1);
+  btn("‹",Math.max(1,currentPage-1),currentPage===1);
+
+  const from=Math.max(1,currentPage-3);
+  const to=Math.min(totalPages,currentPage+3);
+
+  for(let p=from;p<=to;p++){
+    btn(p,p,false,p===currentPage);
+  }
+
+  btn("›",Math.min(totalPages,currentPage+1),currentPage===totalPages);
+  btn("»",totalPages,currentPage===totalPages);
+}
+
+function updateSortHeaders(){
+  document.querySelectorAll("th").forEach(th=>{
+    th.classList.remove("sorted-asc","sorted-desc");
+    if(sortState.field && th.dataset.field===sortState.field){
+      th.classList.add(sortState.dir==="asc" ? "sorted-asc":"sorted-desc");
+    }
+  });
+}
+
+function updateStat(id,value){
+  document.getElementById(id).querySelector("b").textContent=value;
+}
+
+function updateStats(){
+  if(!filtered.length){
+    updateStat("st_max","–");
+    updateStat("st_avg","–");
+    return;
+  }
+
+  const ds=filtered.map(r=>r.Duration);
+  updateStat("st_max",Math.max(...ds).toFixed(2));
+  updateStat("st_avg",(ds.reduce((a,b)=>a+b,0)/ds.length).toFixed(2));
+}
+
+// DETAILS EXPAND
+function toggleDetailsRow(body, tr, full) {
+
+  if (expandedRow && expandedRow.row === tr) {
+      expandedRow.details.remove();
+      expandedRow = null;
+      return;
+  }
+
+  if (expandedRow) {
+      expandedRow.details.remove();
+      expandedRow = null;
+  }
+
+  const details = document.createElement("tr");
+  details.style.background = "#1e293b";
+
+  const td = document.createElement("td");
+  td.colSpan = 7;
+
+  td.innerHTML = buildDetailsHTML(full);
+
+  details.appendChild(td);
+
+  tr.after(details);
+
+  expandedRow = { row: tr, details: details };
+}
+
+function buildDetailsHTML(obj){
+  const sql = formatSQL(obj.Data?.SQLText || "");
+  const params = obj.Data?.Parameters || [];
+  const st = formatStack(obj.Data?.StackTrace || obj.StackTrace || "");
+
+
+  let paramsHTML = "";
+  if (!params.length) {
+    paramsHTML = `<div style="color:#94a3b8;">${dict[langSelect.value].noParams}</div>`;
+  } else {
+    paramsHTML = `
+      <table style="margin-top:8px;">
+        <thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead>
+        <tbody>
+        ${
+          params.map(p=>`
+            <tr>
+              <td>${p.Name}</td>
+              <td>${p.Type}</td>
+              <td>${String(p.Value)}</td>
+            </tr>
+          `).join("")
+        }
+        </tbody>
+      </table>`;
+  }
+
+  let props = `
+  <table>
+    ${Object.keys(obj).map(k=>{
+      if(k==="Data" || k==="StackTrace") return "";
+      return `<tr><td><b>${k}</b></td><td>${String(obj[k])}</td></tr>`;
+    }).join("")}
+  </table>
+  `;
+
+  return `
+    <div class="details-block">
+      <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">Event Properties</h4>
+      ${props}
+    </div>
+
+<div class="details-block">
+<h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+    SQL Query
+    <div style="display:flex; gap:6px;">
+        <button class="copySqlBtn" data-sql="${encodeURIComponent(sql)}">Copy</button>
+        <button class="interpolateBtn"
+            data-sql="${encodeURIComponent(obj.Data?.SQLText || '')}"
+            data-params='${JSON.stringify(obj.Data?.Parameters || [])}'
+        >Interpolate</button>
+    </div>
+</h4>
+
+  <pre>${sql}</pre>
+  <div class="interpolatedSQL" style="margin-top:10px;"></div>
+
+</div>
+
+
+    <div class="details-block">
+      <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">Parameters</h4>
+      ${paramsHTML}
+    </div>
+
+    <div class="details-block">
+      <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">StackTrace</h4>
+      <pre style="white-space:pre;">${st}</pre>
+    </div>
+  `;
+}
+
+function formatSQL(sql){
+  if(!sql) return "";
+  const kw = [
+    "SELECT","FROM","WHERE","JOIN","INNER JOIN","LEFT JOIN","RIGHT JOIN",
+    "GROUP BY","ORDER BY","UNION","LIMIT","OFFSET","AND","OR"
+  ];
+
+  let x = sql.replace(/\s+/g," ").trim();
+
+  kw.forEach(k=>{
+    const r=new RegExp("\\b"+k+"\\b","gi");
+    x=x.replace(r,"\n"+k);
+  });
+
+  x=x.replace(/\s+(AND|OR)\s+/gi,"\n    $1 ");
+
+  x=x.replace(/SELECT/i,"SELECT\n    ");
+
+  return x.trim();
+}
+
+function formatStack(s){
+  if (!s) return "";
+
+  return s
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map(line => line.trimEnd())   // зберігаємо ліві пробіли
+    .join("\n");
+}
+
+// Event delegation for SQL copy buttons
+document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("copySqlBtn")) {
+        const encoded = e.target.getAttribute("data-sql");
+        const text = decodeURIComponent(encoded);
+
+        navigator.clipboard.writeText(text).then(() => {
+            e.target.textContent = "Copied!";
+            setTimeout(() => e.target.textContent = "Copy", 1000);
+        });
+    }
+	if (e.target.classList.contains("copyInterpolatedBtn")) {
+    const encoded = e.target.getAttribute("data-sql");
+    const text = decodeURIComponent(encoded);
+
+    navigator.clipboard.writeText(text).then(() => {
+        e.target.textContent = "Copied!";
+        setTimeout(() => e.target.textContent = "Copy", 1000);
+    });
+}
+
+});
+
+// Interpolation button
+document.addEventListener("click", (e) => {
+    if (!e.target.classList.contains("interpolateBtn")) return;
+
+    const rawSql = decodeURIComponent(e.target.getAttribute("data-sql") || "");
+    const params = JSON.parse(e.target.getAttribute("data-params") || "[]");
+
+    const interpolated = interpolateSQL(rawSql, params);
+
+    const container = e.target.closest(".details-block").querySelector(".interpolatedSQL");
+container.innerHTML = `
+    <h4 style="color:#93c5fd; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+        Interpolated SQL
+        <button class="copyInterpolatedBtn" data-sql="${encodeURIComponent(interpolated)}">Copy</button>
+    </h4>
+    <pre style="white-space:pre;">${interpolated}</pre>
+`;
+
+});
+function interpolateSQL(sql, params) {
+
+    // Clean SQL: remove multiple spaces, normalize newlines
+    sql = sql
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\t/g, "    ")
+        .trim();
+
+    // Build map ParamName->value
+    const map = {};
+    params.forEach(p => {
+        let v = p.Value;
+        switch (p.Type) {
+            case 11: // int
+                v = Number(v);
+                break;
+            case 9: // GUID
+                v = `'${v}'`;
+                break;
+            case 16: // string
+                v = `'${v}'`;
+                break;
+            case 3: // bool
+                v = v ? "TRUE" : "FALSE";
+                break;
+            case 6: // datetime
+                v = `'${v}'`;
+                break;
+            default:
+                return; // ignore
+        }
+        map[p.Name] = `${v} /*@${p.Name}*/`;
+    });
+
+    // Replace parameters in SQL
+    Object.keys(map).forEach(name => {
+        const regex = new RegExp("@" + name + "\\b", "g");
+        sql = sql.replace(regex, map[name]);
+    });
+
+    // Improve formatting: break lines around major keywords
+    const kw = [
+        "SELECT", "UPDATE", "INSERT", "DELETE",
+        "FROM", "WHERE", "SET",
+        "GROUP BY", "ORDER BY"
+    ];
+
+    kw.forEach(k => {
+        sql = sql.replace(new RegExp("\\b" + k + "\\b", "gi"), "\n" + k);
+    });
+
+    // Indent SET clauses
+    sql = sql.replace(/SET\s+/i, "SET\n    ");
+
+    // Indent WHERE
+    sql = sql.replace(/WHERE\s+/i, "\nWHERE\n    ");
+
+// Remove extra blank lines caused by formatting
+sql = sql
+    .split("\n")
+    .filter((line, idx, arr) => {
+        const trimmed = line.trim();
+        const prev = arr[idx - 1]?.trim();
+
+        // Remove empty lines or lines with only comma
+        if (trimmed === "" || trimmed === ",") return false;
+
+        // Remove duplicate newlines
+        if (trimmed.length === 0 && prev.length === 0) return false;
+
+        return true;
+    })
+    .join("\n");
+
+// Fix extra indentation and empty lines after keywords
+sql = sql.replace(/\n\s*\n+/g, "\n");      // condense multiple blank lines
+sql = sql.replace(/\n+(FROM|WHERE|ORDER BY|GROUP BY)/g, "\n$1"); 
+sql = sql.replace(/\n+(LEFT JOIN|INNER JOIN|RIGHT JOIN)/g, "\n$1");
+
+
+    return sql.trim();
+}
+
+
+
+
+</script>
+
+</body>
+</html>

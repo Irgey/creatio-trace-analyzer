@@ -732,25 +732,57 @@ function buildDetailsHTML(obj){
 }
 
 function formatSQL(sql){
-  if(!sql) return "";
-  const kw = [
-    "SELECT","FROM","WHERE","JOIN","INNER JOIN","LEFT JOIN","RIGHT JOIN",
-    "GROUP BY","ORDER BY","UNION","LIMIT","OFFSET","AND","OR"
+  if (!sql) return "";
+
+  // normalize whitespace
+  let x = sql
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Split SELECT columns into lines
+  x = x.replace(
+    /SELECT\s+(.*?)\s+FROM\s+/i,
+    (match, selectPart) => {
+      const cols = selectPart
+        .split(/\s*,\s*/)
+        .map(c => "    " + c + ",")
+        .join("\n");
+
+      return "SELECT\n" + cols.replace(/,$/, "") + "\nFROM ";
+    }
+  );
+
+  // Keywords formatting
+  const keywords = [
+    "FROM",
+    "WHERE",
+    "GROUP BY",
+    "ORDER BY",
+    "HAVING",
+    "LIMIT",
+    "OFFSET"
   ];
 
-  let x = sql.replace(/\s+/g," ").trim();
-
-  kw.forEach(k=>{
-    const r=new RegExp("\\b"+k+"\\b","gi");
-    x=x.replace(r,"\n"+k);
+  keywords.forEach(k => {
+    const r = new RegExp("\\b" + k + "\\b", "gi");
+    x = x.replace(r, "\n" + k);
   });
 
-  x=x.replace(/\s+(AND|OR)\s+/gi,"\n    $1 ");
+  // JOINs
+  x = x.replace(/\s+(LEFT JOIN|INNER JOIN|RIGHT JOIN|FULL JOIN)\s+/gi, "\n$1 ");
+  x = x.replace(/\s+ON\s+/gi, "\n    ON ");
 
-  x=x.replace(/SELECT/i,"SELECT\n    ");
+  // AND / OR in WHERE
+  x = x.replace(/\s+(AND|OR)\s+/gi, "\n    $1 ");
+
+  // Cleanup double empty lines
+  x = x.replace(/\n{2,}/g, "\n");
 
   return x.trim();
 }
+
 
 function formatStack(s){
   if (!s) return "";

@@ -138,7 +138,22 @@ pre {
   border:1px solid #334155;
   font-size:12px;
   overflow-x:auto;
+
+    /* critical fixes */
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
+
+pre.stacktrace {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 
 #searchInput {
     background:#0f172a;
@@ -726,7 +741,7 @@ function buildDetailsHTML(obj){
 
     <div class="details-block">
       <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">StackTrace</h4>
-      <pre style="white-space:pre;">${st}</pre>
+        <pre class="stacktrace">${st}</pre>
     </div>
   `;
 }

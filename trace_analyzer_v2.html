@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Trace analyzer</title>
+
+<style>
+:root {
+  color-scheme: dark;
+
+  --bg: #07111f;
+  --bg-soft: #0b1626;
+  --surface: #101c2e;
+  --surface-elevated: #142238;
+  --surface-muted: #0d192b;
+  --border: #24364f;
+  --border-soft: #1b2a3f;
+
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-soft: #cbd5e1;
+  --heading: #ffffff;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: rgba(37, 99, 235, 0.14);
+  --secondary: #1e293b;
+  --secondary-hover: #334155;
+
+  --success-bg: #123d2a;
+  --success-border: #22c55e;
+  --success-text: #86efac;
+
+  --warning-bg: #3f310d;
+  --warning-border: #facc15;
+  --warning-text: #fde68a;
+
+  --orange-bg: #431f08;
+  --orange-border: #f97316;
+  --orange-text: #fdba74;
+
+  --danger-bg: #4c1010;
+  --danger-border: #ef4444;
+  --danger-text: #fecaca;
+
+  --critical-bg: #5f0f0f;
+  --critical-border: #dc2626;
+  --critical-text: #fecaca;
+
+  --shadow: 0 18px 45px rgba(0,0,0,0.25);
+  --radius: 12px;
+}
+
+body[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f5f7fb;
+  --bg-soft: #edf2f7;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #d8e0ea;
+  --border-soft: #e5eaf2;
+
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-soft: #334155;
+  --heading: #020617;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: rgba(37, 99, 235, 0.10);
+  --secondary: #e2e8f0;
+  --secondary-hover: #cbd5e1;
+
+  --success-bg: #dcfce7;
+  --success-border: #22c55e;
+  --success-text: #166534;
+
+  --warning-bg: #fef9c3;
+  --warning-border: #eab308;
+  --warning-text: #854d0e;
+
+  --orange-bg: #ffedd5;
+  --orange-border: #f97316;
+  --orange-text: #9a3412;
+
+  --danger-bg: #fee2e2;
+  --danger-border: #ef4444;
+  --danger-text: #991b1b;
+
+  --critical-bg: #fecaca;
+  --critical-border: #dc2626;
+  --critical-text: #7f1d1d;
+
+  --shadow: 0 18px 45px rgba(15,23,42,0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(37,99,235,0.16), transparent 34rem),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+header {
+  min-height: 76px;
+  padding: 18px 22px;
+  background: rgba(2, 6, 23, 0.72);
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(12px);
+}
+
+body[data-theme="light"] header {
+  background: rgba(255,255,255,0.78);
+}
+
+.app-title { display: flex; flex-direction: column; gap: 4px; }
+#title { margin: 0; color: var(--heading); font-size: 22px; line-height: 1.2; letter-spacing: -0.02em; }
+.app-subtitle { color: var(--text-muted); font-size: 12px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+#top-panel {
+  padding: 18px 20px 14px;
+}
+
+.panel-card,
+#tableWrapper {
+  background: linear-gradient(180deg, var(--surface), var(--surface-muted));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.panel-card { padding: 14px; }
+#tableWrapper { margin: 0 20px 18px; overflow-x: hidden; max-width: calc(100vw - 40px); }
+
+.toolbar,
+.search-panel {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+
+button, select, input[type="text"] {
+  height: 32px;
+  padding: 6px 12px;
+  margin-right: 0;
+  background: var(--primary);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+}
+
+button:hover { background: var(--primary-hover); }
+button.secondary,
+.theme-toggle {
+  background: var(--secondary);
+  color: var(--text-soft);
+  border-color: var(--border-soft);
+}
+button.secondary:hover,
+.theme-toggle:hover { background: var(--secondary-hover); }
+
+select {
+  min-width: 108px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+input[type="text"],
+#searchInput {
+  background: var(--surface-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  min-width: 220px;
+  font-weight: 400;
+}
+
+input[type="text"]::placeholder { color: var(--text-muted); }
+
+.file-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  gap: 10px;
+}
+.file-wrapper input[type="file"] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 150px;
+  height: 32px;
+}
+.file-wrapper .file-label {
+  background: var(--primary);
+  padding: 7px 14px;
+  border-radius: 7px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  width: 150px;
+  height: 32px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.file-wrapper .file-label:hover { background: var(--primary-hover); }
+#selectedFileName {
+  font-size: 12px;
+  color: var(--text-soft);
+  max-width: 340px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+textarea {
+  width: 100%;
+  height: 200px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+#errorLog {
+  margin-top: 10px;
+  white-space: pre-wrap;
+  color: var(--danger-text);
+  font-size: 12px;
+  border-color: var(--border-soft);
+}
+
+.stats {
+  margin-top: 12px;
+  color: var(--text-muted);
+}
+.stats b { color: var(--text); }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.stat-card {
+  min-height: 56px;
+  padding: 10px 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+.stat-card span { color: var(--text-muted); font-size: 11px; }
+.stat-card b { color: var(--heading); font-size: 14px; }
+
+#codeStatsContainer {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+
+details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+#codeStats { padding-left: 12px; white-space: pre-wrap; margin-top: 6px; font-size: 12px; color: var(--text-soft); }
+
+table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+th, td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+th {
+  cursor: pointer;
+  color: #93c5fd;
+  user-select: none;
+  font-weight: 700;
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+body[data-theme="light"] th { color: #1d4ed8; }
+th.sorted-asc::after { content: " ▲"; }
+th.sorted-desc::after { content: " ▼"; }
+tbody tr:hover { background: var(--primary-soft); }
+th, td {
+  min-width: 0;
+}
+
+td:nth-child(2),
+td:nth-child(3),
+td:nth-child(4),
+td:nth-child(5),
+td:nth-child(6) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+th:nth-child(1), td:nth-child(1) { width: 7%; }
+th:nth-child(2), td:nth-child(2) { width: 15%; }
+th:nth-child(3), td:nth-child(3) { width: 17%; }
+th:nth-child(4), td:nth-child(4) { width: 18%; }
+th:nth-child(5), td:nth-child(5) { width: 18%; }
+th:nth-child(6), td:nth-child(6) { width: 19%; }
+th:nth-child(7), td:nth-child(7) { width: 6%; text-align: right; }
+
+.detailsBtn {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-soft);
+}
+.detailsBtn:hover { background: var(--secondary-hover); color: var(--text); }
+
+.badge {
+  min-width: 58px;
+  display: inline-flex;
+  justify-content: center;
+  padding: 3px 7px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-fast,
+.badge-ok { background: var(--success-bg); border-color: var(--success-border); color: var(--success-text); }
+.badge-warn { background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-text); }
+.badge-orange { background: var(--orange-bg); border-color: var(--orange-border); color: var(--orange-text); }
+.badge-slow,
+.badge-red { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text); }
+.badge-critical { background: var(--critical-bg); border-color: var(--critical-border); color: var(--critical-text); }
+
+.pagination {
+  display: flex;
+  gap: 6px;
+  padding: 12px;
+  flex-wrap: wrap;
+}
+.page-btn {
+  padding: 5px 10px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.page-btn.disabled { opacity: 0.4; cursor: default; }
+
+#detailsRow { background: var(--surface-elevated); padding: 16px; }
+.details-block {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  background: var(--surface-muted);
+}
+
+pre {
+  white-space: pre-wrap;
+  background: var(--surface-elevated);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+pre.stacktrace,
+pre.sql-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.copySqlBtn,
+.interpolateBtn,
+.copyInterpolatedBtn {
+  background: var(--secondary);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.copySqlBtn:hover,
+.interpolateBtn:hover,
+.copyInterpolatedBtn:hover { background: var(--secondary-hover); color: var(--text); }
+.copySqlBtn:active,
+.copyInterpolatedBtn:active { background: var(--primary); color: white; }
+
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+}
+@media (max-width: 720px) {
+  header { align-items: flex-start; gap: 12px; flex-direction: column; }
+  .header-actions { width: 100%; justify-content: flex-start; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+  #tableWrapper { margin: 0 12px 12px; }
+  #top-panel { padding: 12px; }
+}
+.details-row { background: var(--surface-elevated); }
+
+/* Execution timeline - SpeedScope-like compact view */
+#executionTimelinePanel {
+  margin: 14px 0 18px 0;
+}
+
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.timeline-toolbar button {
+  padding: 5px 10px;
+}
+
+.timeline-stage {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.timeline-scroll {
+  overflow: auto;
+  max-height: 560px;
+  min-width: 0;
+  background:
+    linear-gradient(to right, rgba(148, 163, 184, .16) 1px, transparent 1px);
+  background-size: 10% 100%;
+}
+
+.timeline-scale {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.timeline-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid rgba(148, 163, 184, .28);
+}
+
+.timeline-tick span {
+  position: absolute;
+  top: 6px;
+  left: 4px;
+  white-space: nowrap;
+}
+
+.timeline-body {
+  position: relative;
+  cursor: crosshair;
+  user-select: none;
+}
+
+.timeline-lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  border-bottom: 1px solid rgba(148, 163, 184, .08);
+}
+
+.timeline-frame {
+  position: absolute;
+  top: 3px;
+  height: 18px;
+  min-width: 2px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,.18);
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 1px 5px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #0f172a;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.24);
+  user-select: none;
+}
+
+.timeline-frame.sql { background: #bfdbfe; }
+.timeline-frame.esq { background: #bbf7d0; }
+.timeline-frame.process { background: #fbcfe8; }
+.timeline-frame.listener { background: #fed7aa; }
+.timeline-frame.other { background: #cbd5e1; }
+
+.timeline-frame.fast { filter: saturate(.8) brightness(.92); }
+.timeline-frame.normal { filter: saturate(1.05); }
+.timeline-frame.medium { filter: saturate(1.25); }
+.timeline-frame.slow { filter: saturate(1.45) brightness(.98); }
+.timeline-frame.critical {
+  background: #fca5a5;
+  color: #450a0a;
+}
+
+.timeline-frame:hover,
+.timeline-frame.selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+  z-index: 8;
+}
+
+.timeline-frame.related {
+  outline: 2px solid #facc15;
+  outline-offset: 1px;
+  z-index: 6;
+}
+
+.timeline-frame.dimmed {
+  opacity: .28;
+}
+
+.timeline-frame.selected {
+  box-shadow: 0 0 0 2px rgba(59,130,246,.45), 0 0 18px rgba(59,130,246,.45);
+}
+
+.timeline-frame.related {
+  box-shadow: 0 0 0 2px rgba(250,204,21,.35);
+}
+
+.timeline-selection {
+  position: absolute;
+  top: 28px;
+  bottom: 0;
+  border: 1px solid #60a5fa;
+  background: rgba(59,130,246,.22);
+  z-index: 10;
+  pointer-events: none;
+  display: none;
+}
+
+.timeline-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.timeline-note {
+  color: var(--muted);
+}
+
+.timeline-legend {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.timeline-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.timeline-details {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--panel-2);
+  font-size: 12px;
+}
+
+.timeline-details table {
+  margin-top: 6px;
+}
+
+.timeline-details pre {
+  max-height: 220px;
+}
+
+
+/* Help popup */
+.help-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 34px;
+  text-align: center;
+}
+
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: var(--bg);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .18s ease, visibility .18s ease;
+}
+
+.help-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-popup {
+  width: min(460px, calc(100vw - 56px));
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.55);
+  padding: 20px;
+  color: var(--text);
+  transform: translateY(8px) scale(.98);
+  transition: transform .18s ease, opacity .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.help-overlay.open .help-popup {
+  transform: translateY(0) scale(1);
+}
+
+.help-popup h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.help-popup p {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.help-popup a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 700;
+  transition: color .16s ease, text-decoration-color .16s ease;
+}
+
+.help-popup a:hover {
+  text-decoration: underline;
+}
+
+.help-popup-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Smooth interactions */
+button,
+select,
+input,
+textarea,
+.file-label,
+.page-btn,
+.detailsBtn,
+.copySqlBtn,
+.interpolateBtn,
+.copyInterpolatedBtn,
+.timeline-frame,
+tr {
+  transition:
+    background-color .16s ease,
+    border-color .16s ease,
+    color .16s ease,
+    box-shadow .16s ease,
+    opacity .16s ease,
+    transform .16s ease;
+}
+
+button:hover,
+.file-label:hover,
+.page-btn:hover,
+.detailsBtn:hover,
+.copySqlBtn:hover,
+.interpolateBtn:hover,
+.copyInterpolatedBtn:hover {
+  transform: translateY(-1px);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+tr:hover {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+details[open] > summary {
+  border-color: var(--primary);
+}
+
+.panel-card,
+.table-card,
+.details-block,
+.timeline-stage,
+.timeline-details {
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.panel-card:hover,
+.table-card:hover,
+.details-block:hover,
+.timeline-stage:hover {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+}
+
+</style>
+</head>
+
+<body data-theme="dark">
+
+<header>
+  <div class="app-title">
+    <h2 id="title">Trace analyzer</h2>
+    <div class="app-subtitle">Creatio trace log diagnostics</div>
+  </div>
+  <div class="header-actions">
+    <button id="helpBtn" class="theme-toggle help-btn" type="button" title="About">?</button>
+    <button id="themeToggleBtn" class="theme-toggle" type="button">Light</button>
+  </div>
+</header>
+
+<div id="helpOverlay" class="help-overlay" aria-hidden="true">
+  <div class="help-popup" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <h3 id="helpTitle">Creatio Trace Analyzer</h3>
+    <p>
+      Browser-based utility for analyzing Creatio trace JSON files. It helps inspect slow events,
+      SQL queries, parameters, stack traces, event data, and execution timelines.
+    </p>
+    <p>
+      Data is processed locally in the browser. No backend is required.
+    </p>
+        <p>
+      Endpoint to run tracing: 0/api/Tracing/v1/Index (i.e. https://site.creatio.com/0/api/Tracing/v1/Index)
+    </p>
+    <p>
+      Repository:
+      <a href="https://github.com/Irgey/creatio-trace-analyzer" target="_blank" rel="noopener noreferrer">
+        github.com/Irgey/creatio-trace-analyzer
+      </a>
+    </p>
+    <div class="help-popup-actions">
+      <button id="helpCloseBtn" class="secondary" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="top-panel">
+  <div class="panel-card">
+    <div class="toolbar">
+      <button id="toggleTextBtn">Show text input</button>
+
+      <div class="file-wrapper">
+        <span class="file-label" id="fileLabel">Choose File</span>
+        <input type="file" id="fileInput" accept=".json,.txt" />
+        <span id="selectedFileName"></span>
+      </div>
+
+      <button id="parseFileBtn">Parse file</button>
+      <button id="resetSortBtn" class="secondary">Reset sorting</button>
+  <button id="timelineBtn" class="secondary">Execution timeline</button>
+    </div>
+
+    <div id="textInputPanel" style="display:none;">
+      <textarea id="rawInput" placeholder="Paste logs here"></textarea>
+      <button id="parseBtn" class="secondary">Parse text</button>
+    </div>
+
+    <div id="searchPanel" class="search-panel">
+      <select id="searchColumn">
+        <option value="Duration">Duration</option>
+        <option value="Code">Code</option>
+        <option value="StartedOn">StartedOn</option>
+        <option value="Id">Id</option>
+        <option value="ParentId">ParentId</option>
+        <option value="SQLText">SQLText</option>
+      </select>
+      <input id="searchInput" placeholder="Search..." />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="stats stats-grid">
+      <div class="stat-card" id="st_total"><span>Total lines: </span><b>0</b></div>
+      <div class="stat-card" id="st_ok"><span>Valid: </span><b>0</b></div>
+      <div class="stat-card" id="st_err"><span>Errors: </span><b>0</b></div>
+      <div class="stat-card" id="st_found"><span>Found: </span><b>0</b></div>
+      <div class="stat-card" id="st_max"><span>Max Duration: </span><b>–</b></div>
+      <div class="stat-card" id="st_avg"><span>Avg Duration: </span><b>–</b></div>
+    </div>
+
+    <div id="codeStatsContainer">
+      <details>
+        <summary id="codeStatsSummary">Code breakdown</summary>
+        <div id="codeStats"></div>
+      </details>
+    </div>
+
+    <pre id="errorLog"></pre>
+
+    <details id="executionTimelinePanel" style="display:none;">
+      <summary>Execution timeline</summary>
+      <div class="timeline-toolbar">
+        <span id="timelineSummary">No timeline rendered.</span>
+      </div>
+      <div class="timeline-toolbar">
+        <button id="timelineZoomOutBtn" class="secondary">− Zoom</button>
+        <button id="timelineZoomInBtn" class="secondary">+ Zoom</button>
+        <button id="timelineResetZoomBtn" class="secondary">Reset zoom</button>
+        <button id="timelineResetRangeBtn" class="secondary">Reset range</button>
+        <span class="timeline-note">Drag on the timeline to select a time range. Uses current filtered rows. Limit: 1000 events.</span>
+      </div>
+      <div id="timelineContainer" class="timeline-stage"></div>
+      <div id="timelineSelectedDetails" class="timeline-details" style="display:none;"></div>
+    </details>
+  </div>
+</div>
+
+<div id="tableWrapper" class="table-card">
+  <table>
+    <colgroup>
+      <col style="width:7%">
+      <col style="width:15%">
+      <col style="width:17%">
+      <col style="width:18%">
+      <col style="width:18%">
+      <col style="width:19%">
+      <col style="width:6%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th data-field="Duration" data-type="number">Duration</th>
+        <th data-field="Code" data-type="string">Code</th>
+        <th data-field="StartedOn" data-type="string">StartedOn</th>
+        <th data-field="Id" data-type="string">Id</th>
+        <th data-field="ParentId" data-type="string">ParentId</th>
+        <th data-field="SQLText" data-type="string">SQLText</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+let rows = [];
+let rowsOriginal = [];
+let filtered = [];
+let currentPage = 1;
+const pageSize = 50;
+let expandedRow = null;
+let isTimelineVisible = false;
+let timelineZoom = 1;
+let timelineFromMs = null;
+let timelineToMs = null;
+let selectedTimelineEventId = null;
+let suppressTimelineClick = false;
+
+const dict = {
+  title:"Trace analyzer",
+  toggle:"Show text input",
+  toggleHide:"Hide text input",
+  parseText:"Parse text",
+  parseFile:"Parse file",
+  chooseFile:"Choose File",
+  search:"Search",
+  total:"Total lines",
+  valid:"Valid",
+  errors:"Errors",
+  found:"Found",
+  max:"Max Duration",
+  avg:"Avg Duration",
+  codeStats:"Code breakdown",
+  noData:"No data or nothing matches the filter.",
+  reset:"Reset sorting",
+  timeline:"Execution timeline",
+  noParams:"No parameters"
+};
+
+function applyLang(){
+  const d=dict;
+  document.getElementById("title").innerText=d.title;
+  toggleTextBtn.innerText = textInputPanel.style.display==="block" ? d.toggleHide : d.toggle;
+  parseBtn.innerText=d.parseText;
+  parseFileBtn.innerText=d.parseFile;
+  resetSortBtn.innerText=d.reset;
+  if (typeof timelineBtn !== "undefined") timelineBtn.innerText=d.timeline;
+  fileLabel.innerText=d.chooseFile;
+  document.getElementById("searchBtn").innerText=d.search;
+
+  document.getElementById("st_total").childNodes[0].textContent=d.total+": ";
+  document.getElementById("st_ok").childNodes[0].textContent=d.valid+": ";
+  document.getElementById("st_err").childNodes[0].textContent=d.errors+": ";
+  document.getElementById("st_found").childNodes[0].textContent=d.found+": ";
+  document.getElementById("st_max").childNodes[0].textContent=d.max+": ";
+  document.getElementById("st_avg").childNodes[0].textContent=d.avg+": ";
+  document.getElementById("codeStatsSummary").innerText=d.codeStats;
+}
+applyLang();
+
+const themeToggleBtn = document.getElementById("themeToggleBtn");
+function setTheme(theme) {
+  document.body.dataset.theme = theme;
+  themeToggleBtn.textContent = theme === "dark" ? "Light" : "Dark";
+}
+themeToggleBtn.addEventListener("click", () => {
+  setTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+});
+setTheme("dark");
+
+const helpBtn = document.getElementById("helpBtn");
+const helpOverlay = document.getElementById("helpOverlay");
+const helpCloseBtn = document.getElementById("helpCloseBtn");
+
+function closeHelpPopup() {
+  helpOverlay.classList.remove("open");
+  helpOverlay.setAttribute("aria-hidden", "true");
+}
+
+helpBtn.addEventListener("click", () => {
+  helpOverlay.classList.add("open");
+  helpOverlay.setAttribute("aria-hidden", "false");
+});
+
+helpCloseBtn.addEventListener("click", closeHelpPopup);
+
+helpOverlay.addEventListener("click", (e) => {
+  if (e.target === helpOverlay) closeHelpPopup();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeHelpPopup();
+});
+
+
+fileInput.addEventListener("change", () => {
+  const f = fileInput.files[0];
+  const name = f ? f.name : "";
+  selectedFileName.textContent = name;
+
+  if (f) {
+      const r = new FileReader();
+      r.onload = (e) => {
+          parseText(e.target.result);
+      };
+      r.readAsText(f);
+  }
+});
+
+toggleTextBtn.addEventListener("click",()=>{
+  const l=langSelect.value;
+  if(textInputPanel.style.display==="none" || !textInputPanel.style.display){
+    textInputPanel.style.display="block";
+    toggleTextBtn.innerText=dict[l].toggleHide;
+  } else {
+    textInputPanel.style.display="none";
+    toggleTextBtn.innerText=dict[l].toggle;
+  }
+});
+
+parseFileBtn.addEventListener("click",()=>{
+  const f=fileInput.files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>parseText(e.target.result);
+  r.readAsText(f);
+});
+parseBtn.addEventListener("click",()=>parseText(rawInput.value));
+
+function parseText(text){
+  errorLog.textContent="";
+  rows=[];
+  expandedRow=null;
+
+  text=text.replace(/}\\s*{/g,"}\n{");
+  const lines=text.split(/\r?\n/).filter(x=>x.trim());
+  updateStat("st_total",lines.length);
+
+  const errors=[];
+  lines.forEach((line,i)=>{
+    try{
+      const obj=JSON.parse(line.trim());
+      rows.push({
+        ...flat(obj),
+        __full: obj
+      });
+    }catch(e){
+      errors.push(`Line ${i+1}: ${e.message}`);
+    }
+  });
+
+  updateStat("st_err",errors.length);
+  updateStat("st_ok",rows.length);
+  errorLog.textContent=errors.join("\n");
+
+  rowsOriginal = rows.slice();
+  filtered = rows.slice();
+  updateStat("st_found", filtered.length);
+
+  currentPage=1;
+  updateStats();
+  updateCodeStats();
+  renderTable();
+  if (isTimelineVisible) renderExecutionTimeline();
+}
+
+function flat(o){
+  return{
+    Duration:Number(o.Duration||0),
+    Code:o.Code||"",
+    StartedOn:o.StartedOn||"",
+    Id:o.Id||"",
+    ParentId:o.ParentId||"",
+    SQLText:o.Code === "SQL" ? (o.Data?.SQLText||"").replace(/\s+/g," ").trim() : ""
+  };
+}
+
+searchBtn.addEventListener("click",applySearch);
+
+// Run search on Enter key
+searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        applySearch();
+    }
+});
+
+
+function applySearch(){
+  const col=searchColumn.value;
+  const q=searchInput.value.toLowerCase();
+
+  if(!q){
+    filtered=rowsOriginal.slice();
+  } else {
+    filtered=rowsOriginal.filter(r=>String(r[col]).toLowerCase().includes(q));
+  }
+
+  expandedRow=null;
+  updateStat("st_found", filtered.length);
+  updateStats();
+  updateCodeStats();
+  currentPage=1;
+  renderTable();
+  if (isTimelineVisible) renderExecutionTimeline();
+}
+
+function updateCodeStats(){
+  const bucket={};
+  filtered.forEach(r=>{
+    bucket[r.Code] = (bucket[r.Code] || 0) + 1;
+  });
+
+  const sorted = Object.entries(bucket)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([code,count]) => `${code || "(empty)"} — ${count}`)
+    .join("\n");
+
+  document.getElementById("codeStats").textContent = sorted;
+}
+
+resetSortBtn.addEventListener("click",()=>{
+  filtered=rowsOriginal.slice();
+  expandedRow=null;
+  updateStat("st_found", filtered.length);
+  updateStats();
+  updateCodeStats();
+  currentPage=1;
+  renderTable();
+  if (isTimelineVisible) renderExecutionTimeline();
+});
+
+
+timelineBtn.addEventListener("click", () => {
+  timelineZoom = 1;
+  timelineFromMs = null;
+  timelineToMs = null;
+  selectedTimelineEventId = null;
+  renderExecutionTimeline();
+});
+
+document.getElementById("executionTimelinePanel").addEventListener("toggle", (e) => {
+  isTimelineVisible = e.target.open;
+});
+
+document.getElementById("timelineZoomInBtn").addEventListener("click", () => {
+  timelineZoom = Math.min(32, timelineZoom * 1.5);
+  renderExecutionTimeline();
+});
+
+document.getElementById("timelineZoomOutBtn").addEventListener("click", () => {
+  timelineZoom = Math.max(1, timelineZoom / 1.5);
+  renderExecutionTimeline();
+});
+
+document.getElementById("timelineResetZoomBtn").addEventListener("click", () => {
+  timelineZoom = 1;
+  renderExecutionTimeline();
+});
+
+document.getElementById("timelineResetRangeBtn").addEventListener("click", () => {
+  timelineFromMs = null;
+  timelineToMs = null;
+  renderExecutionTimeline();
+});
+
+document.querySelector("thead").addEventListener("click",sortColumn);
+let sortState = { field:null, dir:null, type:null };
+
+function sortColumn(e){
+  const th=e.target.closest("th");
+  if(!th || !th.dataset.field) return;
+
+  const field=th.dataset.field;
+  const type=th.dataset.type;
+
+  if(sortState.field===field){
+    sortState.dir = sortState.dir==="asc" ? "desc" : "asc";
+  } else {
+    sortState.field=field;
+    sortState.type=type;
+    sortState.dir="asc";
+  }
+
+  sortRows();
+  expandedRow=null;
+  updateStats();
+  updateCodeStats();
+  currentPage=1;
+  renderTable();
+  if (isTimelineVisible) renderExecutionTimeline();
+}
+
+function sortRows(){
+  if(!sortState.field) return;
+
+  const f=sortState.field;
+  const t=sortState.type;
+  const dir=sortState.dir==="asc" ? 1 : -1;
+
+  filtered.sort((a,b)=>{
+    if(t==="number") return (a[f]-b[f])*dir;
+    return String(a[f]).localeCompare(String(b[f])) * dir;
+  });
+}
+
+function durationBadgeClass(duration) {
+  if (duration > 5000) return "badge-critical";
+  if (duration >= 1000) return "badge-red";
+  if (duration >= 200) return "badge-orange";
+  if (duration >= 50) return "badge-warn";
+  if (duration > 0) return "badge-ok";
+  return "";
+}
+
+function renderTable(){
+  const body=document.getElementById("resultsBody");
+  body.innerHTML="";
+
+  if(!filtered.length){
+    const tr=document.createElement("tr");
+    const td=document.createElement("td");
+    td.colSpan=7;
+    td.textContent=dict.noData;
+    tr.appendChild(td);
+    body.appendChild(tr);
+    renderPagination();
+    return;
+  }
+
+  const start=(currentPage-1)*pageSize;
+  const subset=filtered.slice(start,start+pageSize);
+
+  subset.forEach((row, idx) => {
+    const full = row.__full;
+
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><span class="badge ${durationBadgeClass(Number(full.Duration || 0))}">${Number(full.Duration||0).toFixed(2)}</span></td>
+      <td>${full.Code}</td>
+      <td>${full.StartedOn}</td>
+      <td>${full.Id}</td>
+      <td>${full.ParentId}</td>
+      <td>${full.Code === "SQL" ? (full.Data?.SQLText || "").replace(/\s+/g," ").trim() : ""}</td>
+      <td><button class="detailsBtn">Details</button></td>
+    `;
+
+    body.appendChild(tr);
+
+    tr.querySelector(".detailsBtn").addEventListener("click",()=>{
+        const globalIndex = start + idx;
+        toggleDetailsRow(body, tr, filtered[globalIndex].__full);
+    });
+  });
+
+  renderPagination();
+  updateSortHeaders();
+}
+
+function renderPagination(){
+  const pag=document.getElementById("pagination");
+  pag.innerHTML="";
+
+  const totalPages=Math.ceil(filtered.length/pageSize);
+  if(totalPages<=1) return;
+
+  function btn(label,page,disabled=false,active=false){
+    const el=document.createElement("div");
+    el.textContent=label;
+    el.className="page-btn";
+    if(disabled) el.classList.add("disabled");
+    if(active) el.classList.add("active");
+    if(!disabled){
+      el.addEventListener("click",()=>{ currentPage=page; expandedRow=null; renderTable(); });
+    }
+    pag.appendChild(el);
+  }
+
+  btn("«",1,currentPage===1);
+  btn("‹",Math.max(1,currentPage-1),currentPage===1);
+
+  const from=Math.max(1,currentPage-3);
+  const to=Math.min(totalPages,currentPage+3);
+
+  for(let p=from;p<=to;p++){
+    btn(p,p,false,p===currentPage);
+  }
+
+  btn("›",Math.min(totalPages,currentPage+1),currentPage===totalPages);
+  btn("»",totalPages,currentPage===totalPages);
+}
+
+function updateSortHeaders(){
+  document.querySelectorAll("th").forEach(th=>{
+    th.classList.remove("sorted-asc","sorted-desc");
+    if(sortState.field && th.dataset.field===sortState.field){
+      th.classList.add(sortState.dir==="asc" ? "sorted-asc":"sorted-desc");
+    }
+  });
+}
+
+function updateStat(id,value){
+  document.getElementById(id).querySelector("b").textContent=value;
+}
+
+function updateStats(){
+  if(!filtered.length){
+    updateStat("st_max","–");
+    updateStat("st_avg","–");
+    return;
+  }
+
+  const ds=filtered.map(r=>r.Duration);
+  updateStat("st_max",Math.max(...ds).toFixed(2));
+  updateStat("st_avg",(ds.reduce((a,b)=>a+b,0)/ds.length).toFixed(2));
+}
+
+
+function getDurationClass(duration) {
+  const d = Number(duration || 0);
+  if (d >= 5000) return "critical";
+  if (d >= 2000) return "slow";
+  if (d >= 500) return "medium";
+  if (d >= 100) return "normal";
+  return "fast";
+}
+
+function getEventStartMs(row) {
+  const ts = row?.StartedOn || row?.__full?.StartedOn || "";
+  const ms = Date.parse(ts);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function makeDataPreview(obj) {
+  if (!obj?.Data) return "";
+  if (obj.Code === "SQL" && obj.Data.SQLText) {
+    return obj.Data.SQLText.replace(/\s+/g, " ").trim().slice(0, 500);
+  }
+  return JSON.stringify(obj.Data, null, 2);
+}
+
+function getTimelineTypeClass(code) {
+  const c = String(code || "");
+  if (c === "SQL") return "sql";
+  if (c.startsWith("ESQ:")) return "esq";
+  if (c.includes("Listener")) return "listener";
+  if (c.includes("Process") || c.includes(":")) return "process";
+  return "other";
+}
+
+function formatTimelineSeconds(ms) {
+  return (ms / 1000).toFixed(2) + "s";
+}
+
+function getTimelineBaseEvents() {
+  return filtered
+    .map(r => r.__full || r)
+    .filter(e => e && e.Id && e.StartedOn && Number.isFinite(Date.parse(e.StartedOn)))
+    .sort((a, b) => Date.parse(a.StartedOn) - Date.parse(b.StartedOn));
+}
+
+function normalizeTimelineRange(events) {
+  if (!events.length) {
+    timelineFromMs = null;
+    timelineToMs = null;
+    return;
+  }
+
+  const min = Date.parse(events[0].StartedOn);
+  const max = Date.parse(events[events.length - 1].StartedOn);
+
+  if (timelineFromMs === null || timelineToMs === null || timelineFromMs < min || timelineToMs > max || timelineFromMs >= timelineToMs) {
+    timelineFromMs = min;
+    timelineToMs = max;
+  }
+}
+
+function getRelatedEventIds(event, idMap, childrenMap) {
+  const related = new Set();
+  if (!event || !event.Id) return related;
+
+  let cur = event;
+  while (cur && cur.Id && !related.has(cur.Id)) {
+    related.add(cur.Id);
+    cur = cur.ParentId ? idMap.get(cur.ParentId) : null;
+  }
+
+  function collectChildren(e) {
+    const children = childrenMap.get(e.Id) || [];
+    for (const child of children) {
+      if (!child?.Id || related.has(child.Id)) continue;
+      related.add(child.Id);
+      collectChildren(child);
+    }
+  }
+
+  collectChildren(event);
+  return related;
+}
+
+function applyTimelineSelection(container, event, idMap, childrenMap) {
+  if (!container || !event) return;
+
+  const relatedIds = getRelatedEventIds(event, idMap, childrenMap);
+
+  container.querySelectorAll(".timeline-frame").forEach(frame => {
+    frame.classList.remove("selected", "related", "dimmed");
+    const id = frame.getAttribute("data-event-id");
+    if (id === event.Id) {
+      frame.classList.add("selected");
+    } else if (relatedIds.has(id)) {
+      frame.classList.add("related");
+    } else {
+      frame.classList.add("dimmed");
+    }
+  });
+}
+
+function showTimelineDetails(event) {
+  const selected = document.getElementById("timelineSelectedDetails");
+  if (!selected || !event) return;
+  selected.style.display = "block";
+  selected.innerHTML = buildDetailsHTML(event);
+}
+
+function renderExecutionTimeline() {
+  const panel = document.getElementById("executionTimelinePanel");
+  const container = document.getElementById("timelineContainer");
+  const summary = document.getElementById("timelineSummary");
+  const selected = document.getElementById("timelineSelectedDetails");
+
+  if (!panel || !container || !summary || !selected) {
+    console.error("Execution timeline panel markup is missing.");
+    return;
+  }
+
+  panel.style.display = "block";
+  panel.open = true;
+  isTimelineVisible = true;
+
+  const allTimelineEvents = getTimelineBaseEvents();
+
+  if (!allTimelineEvents.length) {
+    summary.textContent = "No events with Id and StartedOn in current filter.";
+    container.innerHTML = '<div class="timeline-empty">No timeline data.</div>';
+    selected.style.display = "none";
+    selected.innerHTML = "";
+    return;
+  }
+
+  normalizeTimelineRange(allTimelineEvents);
+
+  const ranged = allTimelineEvents.filter(e => {
+    const ms = Date.parse(e.StartedOn);
+    return (timelineFromMs === null || ms >= timelineFromMs) &&
+           (timelineToMs === null || ms <= timelineToMs);
+  });
+
+  if (!ranged.length) {
+    summary.textContent = "No events in selected timeline range.";
+    container.innerHTML = '<div class="timeline-empty">No events in selected timeline range.</div>';
+    selected.style.display = "none";
+    selected.innerHTML = "";
+    return;
+  }
+
+  const LIMIT = 1000;
+  const limited = ranged.slice(0, LIMIT);
+
+  const idMap = new Map();
+  const childrenMap = new Map();
+
+  for (const e of limited) {
+    idMap.set(e.Id, e);
+    if (e.ParentId) {
+      if (!childrenMap.has(e.ParentId)) childrenMap.set(e.ParentId, []);
+      childrenMap.get(e.ParentId).push(e);
+    }
+  }
+
+  for (const arr of childrenMap.values()) {
+    arr.sort((a, b) => (Date.parse(a.StartedOn) || 0) - (Date.parse(b.StartedOn) || 0));
+  }
+
+  const roots = limited.filter(e => !e.ParentId || !idMap.has(e.ParentId));
+  roots.sort((a, b) => (Date.parse(a.StartedOn) || 0) - (Date.parse(b.StartedOn) || 0));
+
+  const flat = [];
+  const visited = new Set();
+
+  function walk(e, depth) {
+    if (!e || visited.has(e.Id)) return;
+    visited.add(e.Id);
+    flat.push({ event: e, depth });
+    const children = childrenMap.get(e.Id) || [];
+    for (const child of children) walk(child, depth + 1);
+  }
+
+  for (const root of roots) walk(root, 0);
+  for (const e of limited) {
+    if (!visited.has(e.Id)) walk(e, 0);
+  }
+
+  let minStart = Infinity;
+  let maxEnd = -Infinity;
+
+  const normalized = flat.map(item => {
+    const e = item.event;
+    const start = Date.parse(e.StartedOn);
+    const duration = Number(e.Duration || 0);
+    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    const end = start + safeDuration;
+    minStart = Math.min(minStart, start);
+    maxEnd = Math.max(maxEnd, end);
+    return { ...item, start, duration: safeDuration, end };
+  }).filter(x => Number.isFinite(x.start));
+
+  if (!normalized.length || !Number.isFinite(minStart) || !Number.isFinite(maxEnd)) {
+    summary.textContent = "No valid timeline timestamps.";
+    container.innerHTML = '<div class="timeline-empty">No valid timeline timestamps.</div>';
+    selected.style.display = "none";
+    selected.innerHTML = "";
+    return;
+  }
+
+  if (maxEnd <= minStart) maxEnd = minStart + 1;
+  const range = maxEnd - minStart;
+  const maxDepth = Math.max(...normalized.map(x => x.depth), 0);
+  const laneHeight = 24;
+  const bodyHeight = Math.max(180, (maxDepth + 1) * laneHeight + 8);
+  const contentWidthPct = Math.max(100, timelineZoom * 100);
+
+  const limitNote = ranged.length > LIMIT
+    ? ` Rendering ${LIMIT} of ${ranged.length} events. Narrow timeline range by dragging on graph.`
+    : ` Rendering ${normalized.length} events.`;
+
+  summary.innerHTML =
+    `Range: ${formatTimelineSeconds(range)}. Zoom: ${timelineZoom.toFixed(2)}x.` +
+    limitNote +
+    ` <span class="timeline-legend">
+      <span><i style="background:#bfdbfe"></i>SQL</span>
+      <span><i style="background:#bbf7d0"></i>ESQ</span>
+      <span><i style="background:#fbcfe8"></i>Process</span>
+      <span><i style="background:#fed7aa"></i>Listener</span>
+    </span>`;
+
+  const tickCount = 10;
+  let scaleHtml = "";
+  for (let i = 0; i <= tickCount; i++) {
+    const pct = (i / tickCount) * 100;
+    const value = (range * i) / tickCount;
+    scaleHtml += `
+      <div class="timeline-tick" style="left:${pct}%">
+        <span>${formatTimelineSeconds(value)}</span>
+      </div>
+    `;
+  }
+
+  const lanesHtml = Array.from({ length: maxDepth + 1 }, (_, depth) => `
+    <div class="timeline-lane" style="top:${depth * laneHeight}px;"></div>
+  `).join("");
+
+  const framesHtml = normalized.map((item, index) => {
+    const e = item.event;
+    const left = Math.max(0, ((item.start - minStart) / range) * 100);
+    const width = item.duration > 0 ? Math.max(0.12, (item.duration / range) * 100) : 0.12;
+    const durationClass = getDurationClass(item.duration);
+    const typeClass = getTimelineTypeClass(e.Code);
+    const top = item.depth * laneHeight;
+    const title =
+      `${e.Code || ""}\nDuration: ${item.duration} ms\nStartedOn: ${e.StartedOn}\nId: ${e.Id}${e.ParentId ? "\nParentId: " + e.ParentId : ""}`;
+
+    return `
+      <div class="timeline-frame ${typeClass} ${durationClass}"
+           style="left:${left}%; width:${width}%; top:${top + 3}px;"
+           title="${escapeHtml(title)}"
+           data-timeline-index="${index}"
+           data-event-id="${escapeHtml(e.Id)}">
+        ${escapeHtml(e.Code || "(empty)")}
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="timeline-scroll" id="timelineScroll">
+      <div style="position:relative; width:${contentWidthPct}%; min-width:${contentWidthPct}%;">
+        <div class="timeline-scale">${scaleHtml}</div>
+      </div>
+    </div>
+    <div class="timeline-scroll" id="timelineBodyScroll">
+      <div class="timeline-body"
+           id="timelineBody"
+           style="height:${bodyHeight}px; width:${contentWidthPct}%; min-width:${contentWidthPct}%;"
+           data-min-start="${minStart}"
+           data-range="${range}">
+        ${lanesHtml}
+        ${framesHtml}
+        <div class="timeline-selection" id="timelineSelection"></div>
+      </div>
+    </div>
+  `;
+
+  const headerScroll = container.querySelector("#timelineScroll");
+  const bodyScroll = container.querySelector("#timelineBodyScroll");
+  const body = container.querySelector("#timelineBody");
+  const selectionBox = container.querySelector("#timelineSelection");
+
+  if (headerScroll && bodyScroll) {
+    headerScroll.addEventListener("scroll", () => { bodyScroll.scrollLeft = headerScroll.scrollLeft; });
+    bodyScroll.addEventListener("scroll", () => { headerScroll.scrollLeft = bodyScroll.scrollLeft; });
+  }
+
+  let dragStartX = null;
+  let dragging = false;
+
+  if (body && selectionBox) {
+    body.addEventListener("mousedown", (ev) => {
+      if (ev.button !== 0 || ev.target.classList.contains("timeline-frame")) return;
+      const rect = body.getBoundingClientRect();
+      dragStartX = ev.clientX - rect.left;
+      dragging = true;
+      selectionBox.style.display = "block";
+      selectionBox.style.left = `${dragStartX}px`;
+      selectionBox.style.width = "0px";
+      ev.preventDefault();
+    });
+
+    body.addEventListener("mousemove", (ev) => {
+      if (!dragging || dragStartX === null) return;
+      const rect = body.getBoundingClientRect();
+      const currentX = Math.max(0, Math.min(ev.clientX - rect.left, rect.width));
+      const left = Math.min(dragStartX, currentX);
+      const width = Math.abs(currentX - dragStartX);
+      selectionBox.style.left = `${left}px`;
+      selectionBox.style.width = `${width}px`;
+    });
+
+    window.addEventListener("mouseup", (ev) => {
+      if (!dragging || dragStartX === null) return;
+      dragging = false;
+
+      const rect = body.getBoundingClientRect();
+      const endX = Math.max(0, Math.min(ev.clientX - rect.left, rect.width));
+      const left = Math.min(dragStartX, endX);
+      const width = Math.abs(endX - dragStartX);
+      selectionBox.style.display = "none";
+
+      if (width < 8) {
+        dragStartX = null;
+        return;
+      }
+
+      const fromRatio = left / rect.width;
+      const toRatio = (left + width) / rect.width;
+      timelineFromMs = minStart + range * fromRatio;
+      timelineToMs = minStart + range * toRatio;
+      dragStartX = null;
+      suppressTimelineClick = true;
+      renderExecutionTimeline();
+      setTimeout(() => { suppressTimelineClick = false; }, 0);
+    });
+  }
+
+  container.querySelectorAll(".timeline-frame").forEach(el => {
+    el.addEventListener("click", (ev) => {
+      if (suppressTimelineClick) return;
+      ev.stopPropagation();
+
+      const idx = Number(el.getAttribute("data-timeline-index"));
+      const item = normalized[idx];
+      if (!item) return;
+
+      const e = item.event;
+      selectedTimelineEventId = e.Id;
+      applyTimelineSelection(container, e, idMap, childrenMap);
+      showTimelineDetails(e);
+    });
+  });
+
+  if (selectedTimelineEventId && idMap.has(selectedTimelineEventId)) {
+    const e = idMap.get(selectedTimelineEventId);
+    applyTimelineSelection(container, e, idMap, childrenMap);
+    showTimelineDetails(e);
+  } else if (selectedTimelineEventId) {
+    selectedTimelineEventId = null;
+    selected.style.display = "none";
+    selected.innerHTML = "";
+  }
+}
+
+// DETAILS EXPAND
+function toggleDetailsRow(body, tr, full) {
+
+  if (expandedRow && expandedRow.row === tr) {
+      expandedRow.details.remove();
+      expandedRow = null;
+      return;
+  }
+
+  if (expandedRow) {
+      expandedRow.details.remove();
+      expandedRow = null;
+  }
+
+  const details = document.createElement("tr");
+  details.className = "details-row";
+
+  const td = document.createElement("td");
+  td.colSpan = 7;
+
+  td.innerHTML = buildDetailsHTML(full);
+
+  details.appendChild(td);
+
+  tr.after(details);
+
+  expandedRow = { row: tr, details: details };
+}
+
+function buildDetailsHTML(obj){
+  const isSqlEvent = obj.Code === "SQL";
+  const sql = isSqlEvent ? formatSQL(obj.Data?.SQLText || "") : "";
+  const params = isSqlEvent ? (obj.Data?.Parameters || []) : [];
+  const st = isSqlEvent ? formatStack(obj.Data?.StackTrace || obj.StackTrace || "") : "";
+
+  const dataObj = obj.Data || null;
+
+  let props = `
+  <table>
+    ${Object.keys(obj).map(k=>{
+      if(k==="Data" || k==="StackTrace") return "";
+      return `<tr><td><b>${k}</b></td><td>${String(obj[k])}</td></tr>`;
+    }).join("")}
+  </table>
+  `;
+
+  let dataHTML = "";
+  if (dataObj) {
+    const dataRows = Object.keys(dataObj).map(k => {
+      const v = dataObj[k];
+
+      if (isSqlEvent && (k === "SQLText" || k === "Parameters" || k === "StackTrace")) {
+        return "";
+      }
+
+      if (typeof v === "object" && v !== null) {
+        return `
+          <tr>
+            <td><b>${k}</b></td>
+            <td><pre>${JSON.stringify(v, null, 2)}</pre></td>
+          </tr>
+        `;
+      }
+
+      return `
+        <tr>
+          <td><b>${k}</b></td>
+          <td>${String(v)}</td>
+        </tr>
+      `;
+    }).join("");
+
+    if (dataRows.trim()) {
+      dataHTML = `
+        <div class="details-block">
+          <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">Data</h4>
+          <table>
+            ${dataRows}
+          </table>
+        </div>
+      `;
+    }
+  }
+
+  let paramsHTML = "";
+  if (isSqlEvent) {
+    if (!params.length) {
+      paramsHTML = `
+        <div class="details-block">
+          <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">Parameters</h4>
+          <div style="color:#94a3b8;">${dict.noParams}</div>
+        </div>
+      `;
+    } else {
+      paramsHTML = `
+        <div class="details-block">
+          <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">Parameters</h4>
+          <table style="margin-top:8px;">
+            <thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead>
+            <tbody>
+            ${
+              params.map(p=>`
+                <tr>
+                  <td>${p.Name}</td>
+                  <td>${p.Type}</td>
+                  <td>${String(p.Value)}</td>
+                </tr>
+              `).join("")
+            }
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  }
+
+  const sqlBlock = isSqlEvent ? `
+    <div class="details-block">
+      <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+        SQL Query
+        <div style="display:flex; gap:6px;">
+          <button class="copySqlBtn" data-sql="${encodeURIComponent(sql)}">Copy</button>
+          <button class="interpolateBtn"
+            data-sql="${encodeURIComponent(obj.Data?.SQLText || '')}"
+            data-params='${JSON.stringify(obj.Data?.Parameters || [])}'
+          >Interpolate</button>
+        </div>
+      </h4>
+
+      <pre>${sql}</pre>
+      <div class="interpolatedSQL" style="margin-top:10px;"></div>
+    </div>
+  ` : "";
+
+  const stackTraceBlock = isSqlEvent && st ? `
+    <div class="details-block">
+      <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">StackTrace</h4>
+      <pre class="stacktrace">${st}</pre>
+    </div>
+  ` : "";
+
+  return `
+    <div class="details-block">
+      <h4 style="margin:0 0 8px 0;color:#93c5fd;font-size:15px;">Event Properties</h4>
+      ${props}
+    </div>
+
+    ${dataHTML}
+
+    ${sqlBlock}
+
+    ${paramsHTML}
+
+    ${stackTraceBlock}
+  `;
+}
+
+function formatSQL(sql){
+  if (!sql) return "";
+
+  // normalize whitespace
+  let x = sql
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Split SELECT columns into lines
+  x = x.replace(
+    /SELECT\s+(.*?)\s+FROM\s+/i,
+    (match, selectPart) => {
+      const cols = selectPart
+        .split(/\s*,\s*/)
+        .map(c => "    " + c + ",")
+        .join("\n");
+
+      return "SELECT\n" + cols.replace(/,$/, "") + "\nFROM ";
+    }
+  );
+
+  // Keywords formatting
+  const keywords = [
+    "FROM",
+    "WHERE",
+    "GROUP BY",
+    "ORDER BY",
+    "HAVING",
+    "LIMIT",
+    "OFFSET"
+  ];
+
+  keywords.forEach(k => {
+    const r = new RegExp("\\b" + k + "\\b", "gi");
+    x = x.replace(r, "\n" + k);
+  });
+
+  // JOINs
+  x = x.replace(/\s+(LEFT JOIN|INNER JOIN|RIGHT JOIN|FULL JOIN)\s+/gi, "\n$1 ");
+  x = x.replace(/\s+ON\s+/gi, "\n    ON ");
+
+  // AND / OR in WHERE
+  x = x.replace(/\s+(AND|OR)\s+/gi, "\n    $1 ");
+
+  // Cleanup double empty lines
+  x = x.replace(/\n{2,}/g, "\n");
+
+  return x.trim();
+}
+
+
+function formatStack(s){
+  if (!s) return "";
+
+  return s
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map(line => line.trimEnd())   // зберігаємо ліві пробіли
+    .join("\n");
+}
+
+// Event delegation for SQL copy buttons
+document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("copySqlBtn")) {
+        const encoded = e.target.getAttribute("data-sql");
+        const text = decodeURIComponent(encoded);
+
+        navigator.clipboard.writeText(text).then(() => {
+            e.target.textContent = "Copied!";
+            setTimeout(() => e.target.textContent = "Copy", 1000);
+        });
+    }
+	if (e.target.classList.contains("copyInterpolatedBtn")) {
+    const encoded = e.target.getAttribute("data-sql");
+    const text = decodeURIComponent(encoded);
+
+    navigator.clipboard.writeText(text).then(() => {
+        e.target.textContent = "Copied!";
+        setTimeout(() => e.target.textContent = "Copy", 1000);
+    });
+}
+
+});
+
+// Interpolation button
+document.addEventListener("click", (e) => {
+    if (!e.target.classList.contains("interpolateBtn")) return;
+
+    const rawSql = decodeURIComponent(e.target.getAttribute("data-sql") || "");
+    const params = JSON.parse(e.target.getAttribute("data-params") || "[]");
+
+    const interpolated = interpolateSQL(rawSql, params);
+
+    const container = e.target.closest(".details-block").querySelector(".interpolatedSQL");
+container.innerHTML = `
+    <h4 style="color:#93c5fd; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+        Interpolated SQL
+        <button class="copyInterpolatedBtn" data-sql="${encodeURIComponent(interpolated)}">Copy</button>
+    </h4>
+    <pre class="sql-pre">${interpolated}</pre>
+`;
+
+});
+function interpolateSQL(sql, params) {
+
+    // Clean SQL: remove multiple spaces, normalize newlines
+    sql = sql
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\t/g, "    ")
+        .trim();
+
+    // Build map ParamName->value
+    const map = {};
+    params.forEach(p => {
+        let v = p.Value;
+        switch (p.Type) {
+            case 11: // int
+                v = Number(v);
+                break;
+            case 9: // GUID
+                v = `'${v}'`;
+                break;
+            case 16: // string
+                v = `'${v}'`;
+                break;
+            case 3: // bool
+                v = v ? "TRUE" : "FALSE";
+                break;
+            case 6: // datetime
+                v = `'${v}'`;
+                break;
+            default:
+                return; // ignore
+        }
+        map[p.Name] = `${v} /*@${p.Name}*/`;
+    });
+
+    // Replace parameters in SQL
+    Object.keys(map).forEach(name => {
+        const regex = new RegExp("@" + name + "\\b", "g");
+        sql = sql.replace(regex, map[name]);
+    });
+
+    // Improve formatting: break lines around major keywords
+    const kw = [
+        "SELECT", "UPDATE", "INSERT", "DELETE",
+        "FROM", "WHERE", "SET",
+        "GROUP BY", "ORDER BY"
+    ];
+
+    kw.forEach(k => {
+        sql = sql.replace(new RegExp("\\b" + k + "\\b", "gi"), "\n" + k);
+    });
+
+    // Indent SET clauses
+    sql = sql.replace(/SET\s+/i, "SET\n    ");
+
+    // Indent WHERE
+    sql = sql.replace(/WHERE\s+/i, "\nWHERE\n    ");
+
+// Remove extra blank lines caused by formatting
+sql = sql
+    .split("\n")
+    .filter((line, idx, arr) => {
+        const trimmed = line.trim();
+        const prev = arr[idx - 1]?.trim();
+
+        // Remove empty lines or lines with only comma
+        if (trimmed === "" || trimmed === ",") return false;
+
+        // Remove duplicate newlines
+        if (trimmed.length === 0 && prev.length === 0) return false;
+
+        return true;
+    })
+    .join("\n");
+
+// Fix extra indentation and empty lines after keywords
+sql = sql.replace(/\n\s*\n+/g, "\n");      // condense multiple blank lines
+sql = sql.replace(/\n+(FROM|WHERE|ORDER BY|GROUP BY)/g, "\n$1"); 
+sql = sql.replace(/\n+(LEFT JOIN|INNER JOIN|RIGHT JOIN)/g, "\n$1");
+
+
+    return sql.trim();
+}
+
+
+
+
+</script>
+
+</body>
+</html>

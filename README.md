@@ -1,121 +1,195 @@
 # Trace Analyzer
 
-**Trace Analyzer** — lightweight browser-based tool for analyzing Creatio trace logs that can be collected via 0/api/Tracing/v1/Index endpoint.  
-It works entirely offline, requires no installation, and is optimized for large log files containing thousands of SQL and application events.
+**Trace Analyzer** is a lightweight browser-based tool for analyzing Creatio trace logs collected via the `0/api/Tracing/v1/Index` endpoint.
 
-Trace Analyzer helps developers, support engineers, and performance analysts quickly inspect SQL queries, execution durations, parameters, and stack traces, enabling fast root-cause analysis.
+The project works entirely in the browser, requires no backend, and can be used offline after downloading the repository.
+
+Repository: https://github.com/Irgey/creatio-trace-analyzer
 
 ---
 
+# Original Version
+
+The original version focuses on tabular trace inspection and SQL diagnostics.
+
 ## Features
 
-### **1. Log Loading**
+### Log Loading
+
 Two input modes are supported:
 
-#### **File Upload**
-- Select a `.json` or `.txt` trace file  
+#### File Upload
+- Select a `.json` or `.txt` trace file
 - The parser automatically processes line-by-line JSON objects
 
-#### **Paste Raw Trace Text**
+#### Paste Raw Trace Text
 - Expand the input panel
 - Paste trace content directly
 - Press **Parse text**
 
-Both modes produce a structured dataset ready for analysis.
-
 ---
 
-## **2. Interactive Table View**
+### Interactive Table View
+
 The parsed entries appear in a sortable, paginated table with columns:
 
-- **Duration**
-- **Code**
-- **StartedOn**
-- **Id**
-- **ParentId**
-- **SQLText** (short preview)
+- Duration
+- Code
+- StartedOn
+- Id
+- ParentId
+- SQLText preview
 
 Available operations:
 
-- Sorting by any column  
-- Pagination for large logs  
-- Searching by selected column  
-- Resetting to original row order  
+- Sorting by any column
+- Pagination for large logs
+- Searching by selected column
+- Resetting to original row order
 
 ---
 
-## **3. Detailed Drill-Down View**
-Each row includes a **Details** button.  
-Expanding it reveals:
+### Detailed Drill-Down View
 
-### **Event Properties**
-All top-level metadata of the trace entry.
+Each row includes a **Details** button.
 
-### **Formatted SQL**
-SQL queries are automatically formatted for readability:
-- Keyword alignment  
-- Normalized whitespace  
-- Multi-line structure  
+The details section supports:
 
-### **SQL Parameters**
-A table showing:
-- Parameter name  
-- Type  
-- Value  
+#### Event Properties
+Displays all top-level event fields.
 
-### **Interpolated SQL**
-A reconstructed SQL statement with real parameter values substituted into the query.
+#### Formatted SQL
+SQL queries are automatically formatted for readability.
+
+#### SQL Parameters
+Displays:
+- Parameter name
+- Type
+- Value
+
+#### Interpolated SQL
+Builds SQL with substituted parameter values.
 
 Supported parameter types:
-- **11** — Integer  
-- **9** — GUID  
-- **16** — String  
-- **3** — Boolean  
-- **6** — DateTime  
+- `11` — Integer
+- `9` — GUID
+- `16` — String
+- `3` — Boolean
+- `6` — DateTime
 
-Substitutions include inline comments:
-/@ParamName/
-
-
-A **Copy** button allows quick extraction of the fully interpolated query.
-
-### **StackTrace**
-A normalized multi-line stack trace, cleaned and formatted for readability.
+#### StackTrace
+Formatted multi-line stack trace viewer.
 
 ---
 
-## **4. Built-in Statistics**
-Trace Analyzer automatically computes:
+### Built-in Statistics
 
-- Total records  
-- Successfully parsed entries  
-- Parsing errors  
-- Results matching active filters  
-- **Maximum Duration**  
-- **Average Duration**  
-- A frequency breakdown of `Code` values (sorted descending)
+The tool calculates:
 
-These metrics help identify slow or problematic operations quickly.
+- Total records
+- Successfully parsed entries
+- Parsing errors
+- Results matching filters
+- Maximum duration
+- Average duration
+- Code breakdown statistics
 
 ---
 
-## **5. Language Support**
-The interface supports:
+# Version 2 Features
 
-- **English**  
-- **Ukrainian**
+The second version extends Trace Analyzer with advanced visualization, UI improvements, and execution-flow analysis.
 
-Switching languages is available from the header at any time.
+## Execution Timeline
+
+A SpeedScope-inspired execution timeline was added.
+
+The timeline uses:
+- `Id`
+- `ParentId`
+- `StartedOn`
+- `Duration`
+- `Code`
+
+Capabilities:
+- Visualize event duration on a time axis
+- Display nested execution relationships
+- Horizontal zoom support
+- Time-range selection directly on the graph
+- Selected event highlighting
+- Parent/child relationship highlighting
+- Automatic dimming of unrelated events
+- Integrated Details panel for selected timeline events
+
+For browser performance, timeline rendering is limited to 1000 events simultaneously.
+
+---
+
+## Event-Specific Details
+
+The Details panel was improved:
+
+### SQL Events
+For `Code = SQL`:
+- SQLText
+- Parameters
+- Interpolated SQL
+- StackTrace
+
+### Non-SQL Events
+For other event types:
+- SQL-specific sections are hidden
+- `Data` object is displayed when available
+
+Example:
+```json
+{
+  "Code": "Contact:Changed",
+  "Data": {
+    "Id": "ee0af4a6-61b8-40ba-9ccd-aa4313120f09"
+  }
+}
+```
+
+---
+
+## UI Improvements
+
+### Themes
+- Dark mode
+- Light mode
+
+### Visual Improvements
+- Smooth hover animations
+- Improved table layout
+- Responsive timeline rendering
+- Better stack trace wrapping
+- Improved modal dialogs
+
+### Help Popup
+A built-in help dialog now provides:
+- Tool description
+- Repository link
+- Quick usage information
 
 ---
 
 ## Usage
 
-1. Open `index.html` in any modern browser (Chrome, Edge, Firefox, Safari)  
-2. Upload a trace file or paste raw trace data  
-3. Review the parsed results in the interactive table  
-4. Use search, sorting, and pagination to narrow the dataset  
-5. Open **Details** to inspect SQL, parameters, interpolated SQL, and stack trace  
-6. Use built-in copy buttons to extract formatted statements
+1. Open `index.html` in a modern browser
+2. Upload a trace file or paste raw trace data
+3. Use table filters and sorting
+4. Open **Details** to inspect events
+5. Open **Execution timeline**
+6. Zoom and drag-select a time range for detailed analysis
 
 ---
+
+
+## Notes
+
+- All processing happens locally in the browser
+- No data is sent to external services
+- No backend is required
+- Works with large trace files
+- Timeline rendering is intentionally limited for browser responsiveness

@@ -1031,13 +1031,12 @@ fileInput.addEventListener("change", () => {
 });
 
 toggleTextBtn.addEventListener("click",()=>{
-  const l=langSelect.value;
   if(textInputPanel.style.display==="none" || !textInputPanel.style.display){
     textInputPanel.style.display="block";
-    toggleTextBtn.innerText=dict[l].toggleHide;
+    toggleTextBtn.innerText=dict.toggleHide;
   } else {
     textInputPanel.style.display="none";
-    toggleTextBtn.innerText=dict[l].toggle;
+    toggleTextBtn.innerText=dict.toggle;
   }
 });
 
@@ -1111,8 +1110,7 @@ searchInput.addEventListener("keydown", (e) => {
 
 function applySearch(){
   const col=searchColumn.value;
-  const q=searchInput.value.toLowerCase();
-
+  const q=searchInput.value.trim().toLowerCase();
   if(!q){
     filtered=rowsOriginal.slice();
   } else {
